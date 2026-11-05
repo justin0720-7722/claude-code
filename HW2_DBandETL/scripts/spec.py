@@ -1,203 +1,229 @@
 # -*- coding: utf-8 -*-
 """
-HW2 線上書店訂購管理系統 — 資料表 / 欄位規格（單一來源）
+HW2 校園社團活動管理系統 — 資料表 / 欄位規格（單一來源，依 HW1_TableSchemaSketch_41411017E 設計）
 Excel 工作檔、匯入檔、Access 資料庫都由這份規格產生。
 
-公式樣板中的佔位符：
-  {F:欄位}      同一列另一個欄位的儲存格，例如 {F:性別} -> C5
-  {R:表.欄位}   另一張表整欄的絕對參照，例如 {R:會員.會員編號} -> 會員!$A:$A
+公式樣板佔位符：
+  {F:欄位}      同一列另一個欄位（或輔助欄）的儲存格，例如 {F:Grade} -> D5
+  {C:欄位}      該欄位的欄字母，例如 {C:ActivityID} -> B
+  {R:表.欄位}   另一張表整欄的絕對參照，例如 {R:StudentTable.StudentID} -> StudentTable!$A:$A
+  {P}           上一列的列號（用於「本列以上」的累計範圍）
 """
+import datetime as dt
 
-# ---------------------------------------------------------------- 參數清單
+STUDENT_ID = "41411017E"
+BASE_DATE = dt.datetime(2026, 11, 5)          # 系統基準日（「今天」），固定下來讓資料可重現
+SEMESTER = "115 學年度第 1 學期"
+
+# ---------------------------------------------------------------- 參數清單（皆定義為 Excel 名稱）
+DEPTS = ["資訊管理學系", "資訊工程學系", "企業管理學系", "國際企業學系", "英語學系", "數學系",
+         "物理學系", "化學系", "生命科學系", "美術學系", "音樂學系", "體育學系", "教育學系",
+         "心理與諮商學系", "地理學系", "歷史學系"]
+CLUBS = [  # (社團名稱, 社團類別)
+    ("程式設計研究社", "學術"), ("資訊安全研究社", "學術"), ("數學研究社", "學術"), ("天文社", "學術"),
+    ("辯論社", "學術"), ("經濟研究社", "學術"), ("日語研究社", "學術"),
+    ("攝影社", "藝文"), ("吉他社", "藝文"), ("合唱團", "藝文"), ("管樂社", "藝文"), ("話劇社", "藝文"),
+    ("書法社", "藝文"), ("動漫社", "藝文"), ("熱舞社", "藝文"),
+    ("籃球社", "體育"), ("排球社", "體育"), ("羽球社", "體育"), ("桌球社", "體育"), ("游泳社", "體育"),
+    ("登山社", "體育"), ("跆拳道社", "體育"),
+    ("慈幼社", "服務"), ("春暉社", "服務"), ("環保志工社", "服務"), ("國際志工社", "服務"),
+    ("康輔社", "康樂"), ("桌遊社", "康樂"), ("魔術社", "康樂"), ("南友會", "聯誼"),
+]
+CLUB_TYPES = ["學術", "藝文", "體育", "服務", "康樂", "聯誼"]
+ACT_STATUS = ["報名中", "已額滿", "已結束", "取消"]
+ATTEND = ["未簽到", "已出席", "缺席"]
+PAY = ["未繳", "已繳", "免繳"]
+
 LISTS = {
     "姓氏": list("陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴周徐蘇葉莊呂江何蕭羅高潘簡朱鍾游彭詹胡施沈"),
-    "男生名字": ["志明", "家豪", "俊傑", "建宏", "承恩", "冠宇", "宇翔", "柏翰", "彥廷", "品睿",
-               "子軒", "宥廷", "哲瑋", "承翰", "冠廷", "宗翰", "育誠", "立偉", "威廷", "信宏",
-               "明哲", "國華", "俊宏", "文彬", "嘉偉", "睿恩", "柏宇", "家銘", "致遠", "仁傑"],
-    "女生名字": ["淑芬", "怡君", "雅婷", "佳穎", "詩涵", "欣怡", "宜蓁", "思妤", "子晴", "品妍",
-               "雨潔", "芷瑄", "郁婷", "佩珊", "家瑜", "婉婷", "筱涵", "語彤", "依晨", "心怡",
-               "雅雯", "美玲", "惠如", "慧君", "靜宜", "玉婷", "曉薇", "羽彤", "沛蓉", "亭妤"],
-    "縣市清單": ["臺北市", "新北市", "桃園市", "臺中市", "臺南市", "高雄市", "基隆市", "新竹市",
-              "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "屏東縣",
-              "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣"],
-    "信箱網域": ["gmail.com", "yahoo.com.tw", "hotmail.com", "outlook.com", "ntnu.edu.tw"],
-    "類別清單": ["文學小說", "推理懸疑", "奇幻科幻", "歷史傳記", "心理勵志", "商業理財", "投資理財",
-              "電腦資訊", "程式設計", "人工智慧", "自然科普", "醫療保健", "飲食料理", "旅遊地圖",
-              "藝術設計", "攝影", "音樂", "語言學習", "考試用書", "親子教養", "童書繪本", "青少年文學",
-              "漫畫輕小說", "宗教哲學", "社會科學", "政治法律", "教育", "運動休閒", "生活風格", "建築居家"],
-    "出版社清單": ["青松出版", "藍鯨文化", "晨曦書房", "山嵐出版社", "海風文創", "星河圖書", "木棉出版",
-               "雲端書局", "北辰文化", "南方書屋", "白鷺出版", "黑潮文化", "紙飛機出版", "燈塔書坊",
-               "銀杏出版", "稻穗文化", "琥珀書房", "鯨落出版", "知行出版", "築夢文化", "拾光書屋",
-               "遠帆出版", "綠洲圖書", "小樹苗童書", "方格子出版", "墨香書局", "鳶尾花文化", "雙魚座出版",
-               "月光森林", "島嶼書房"],
-    "書名前綴": ["被遺忘的", "最後的", "看不見的", "第一次", "沉默的", "漫長的", "微小的", "深夜的",
-              "流浪的", "未完成的", "透明的", "倒數的", "溫柔的", "孤獨的", "失落的", "遙遠的",
-              "簡單的", "零基礎", "圖解", "一次搞懂", "實戰", "高效", "給新手的", "從零開始的",
-              "全新", "超圖解", "精通", "日常的", "無聲的", "閃耀的"],
-    "書名主題": ["時光旅人", "海邊小鎮", "城市地圖", "資料庫設計", "Python入門", "Excel函數", "理財思維",
-              "咖啡筆記", "星空日記", "貓咪事件簿", "密室殺人", "宇宙航行", "台灣史", "心理學",
-              "料理教室", "旅行手帳", "設計法則", "攝影構圖", "英文單字", "親子共讀", "森林冒險",
-              "未來簡史", "人工智慧", "投資策略", "健康飲食", "古典音樂", "建築美學", "日語會話",
-              "專案管理", "數據分析"],
-    "付款方式清單": ["信用卡", "ATM轉帳", "貨到付款", "LINE Pay", "超商代碼"],
-    "配送方式清單": ["宅配到府", "超商取貨", "門市自取"],
+    "名字": ["志明", "家豪", "俊傑", "建宏", "承恩", "冠宇", "宇翔", "柏翰", "彥廷", "品睿",
+           "子軒", "宥廷", "哲瑋", "承翰", "宗翰", "育誠", "立偉", "信宏", "睿恩", "致遠",
+           "怡君", "雅婷", "佳穎", "詩涵", "欣怡", "宜蓁", "思妤", "子晴", "品妍", "雨潔",
+           "芷瑄", "郁婷", "佩珊", "家瑜", "筱涵", "語彤", "依晨", "心怡", "羽彤", "亭妤"],
+    "系所清單": DEPTS,
+    "系所代碼": [f"{i:02d}" for i in range(1, len(DEPTS) + 1)],
+    "社團清單": [c[0] for c in CLUBS],
+    "社團類別對照": [c[1] for c in CLUBS],
+    "社團類別清單": CLUB_TYPES,
+    "簡介片語一": ["以推廣興趣交流為宗旨", "致力培養專業技能", "歡迎零基礎同學加入", "每週固定舉辦社課",
+              "由學長姐帶領學習", "重視團隊合作精神", "提供跨系交流平台", "結合理論與實作"],
+    "簡介片語二": ["每學期舉辦成果發表", "定期舉辦校外交流", "積極參與全國大專競賽", "結合服務學習課程",
+              "打造溫暖的社團氛圍", "提供器材借用服務", "與他校社團合辦活動", "培養未來社團幹部"],
+    "活動類型": ["期初社員大會", "新生迎新茶會", "入門教學課程", "進階工作坊", "專題講座", "校外參訪",
+              "成果發表會", "聯誼晚會", "志工服務", "期末聚餐", "校內友誼賽", "讀書會"],
+    "地點清單": ["綜合教學大樓A101", "綜合教學大樓B203", "學生活動中心多功能廳", "學生活動中心社辦",
+              "體育館", "游泳館", "圖書館國際會議廳", "誠正大樓演講廳", "戶外操場", "線上會議室"],
+    "活動狀態清單": ACT_STATUS,
+    "出席狀態清單": ATTEND,
+    "繳費狀態清單": PAY,
+    "備註清單": ["第一次參加活動", "需要素食餐點", "與同學一起報名", "已加入社團LINE群組",
+              "需借用器材", "可能晚到 15 分鐘", "需要停車位", "請開立收據"],
+    "基準日": [BASE_DATE],
 }
-
-# 名字由 姓氏 + 名字 組成（作者 / 聯絡人用，性別隨機）
-RAND_NAME = ('INDEX(姓氏,RANDBETWEEN(1,ROWS(姓氏)))&IF(RANDBETWEEN(0,1)=1,'
-             'INDEX(男生名字,RANDBETWEEN(1,ROWS(男生名字))),INDEX(女生名字,RANDBETWEEN(1,ROWS(女生名字))))')
 
 
 def pick(listname):
-    return f'INDEX({listname},RANDBETWEEN(1,ROWS({listname})))'
+    return f"INDEX({listname},RANDBETWEEN(1,ROWS({listname})))"
 
 
 def fk(table, field):
-    """從父表的主鍵欄隨機挑一筆（自動依父表筆數調整範圍）。"""
-    return f'INDEX({{R:{table}.{field}}},RANDBETWEEN(2,COUNTA({{R:{table}.{field}}})))'
+    """從父表的主鍵欄隨機挑一筆（範圍隨父表筆數自動調整）。"""
+    return f"INDEX({{R:{table}.{field}}},RANDBETWEEN(2,COUNTA({{R:{table}.{field}}})))"
+
+
+def vlist(items):
+    return 'In (' + ",".join(f'"{x}"' for x in items) + ')'
+
+
+def F(name, caption, typ, size=None, *, req=False, key="", index=False, rule="", rtext="",
+      fmt="", desc="", formula="", lookup=None):
+    """typ: TEXT / MEMO / BYTE / INT / LONG / AUTONUMBER / MONEY / DATE / DATETIME
+    key: PK / UQ / FK:表.欄位；lookup: ("values", [...]) 或 ("query", SQL, 欄數, 欄寬)"""
+    return dict(name=name, caption=caption, type=typ, size=size, req=req, key=key, index=index,
+                rule=rule, rtext=rtext, fmt=fmt, desc=desc, formula=formula, lookup=lookup)
 
 
 # ---------------------------------------------------------------- 資料表規格
-# 欄位 tuple:
-# (欄位名稱, Access型別, 欄位大小, 必填, 鍵/索引, 驗證規則, 驗證文字, 格式, 說明, Excel公式)
-# Access型別: TEXT / BYTE / INT / LONG / AUTONUMBER / MONEY / DOUBLE / DATE / BOOLEAN
-# 鍵/索引: PK / FK:表.欄位 / UQ / ""
 TABLES = [
     {
-        "name": "類別", "rows": 30, "desc": "書籍分類主檔",
+        "name": "StudentTable", "zh": "學生資料", "rows": 60, "desc": "記錄學生基本資料",
         "fields": [
-            ("類別編號", "TEXT", 3, True, "PK", 'Like "C##"', "格式須為 C + 2 位數字",
-             "", "主鍵，C01~C30", '="C"&TEXT(ROW()-1,"00")'),
-            ("類別名稱", "TEXT", 20, True, "UQ", "", "", "", "分類名稱，不可重複",
-             '=INDEX(類別清單,ROW()-1)'),
-            ("類別說明", "TEXT", 100, False, "", "", "", "", "分類簡介",
-             '={F:類別名稱}&"相關書籍專區"'),
-            ("陳列樓層", "BYTE", None, True, "", "Between 1 And 4", "樓層只能是 1~4 樓",
-             "", "實體門市陳列樓層", '=RANDBETWEEN(1,4)'),
-            ("建立日期", "DATE", None, True, "", ">=#1/1/2018#", "建立日期不可早於 2018/1/1",
-             "yyyy/mm/dd", "分類建立日", '=RANDBETWEEN(DATE(2018,1,1),DATE(2020,12,31))'),
+            F("StudentID", "學號", "TEXT", 10, req=True, key="PK",
+              rule='Like "4#######[A-Z]"', rtext="學號格式：4 + 入學年2碼 + 系所2碼 + 序號3碼 + 英文字母",
+              desc="主鍵；入學年與年級一致（115 學年度 1 年級 = 15）",
+              formula='="4"&TEXT(116-{F:Grade}-100,"00")&INDEX(系所代碼,MATCH({F:DeptName},系所清單,0))&TEXT(ROW()-1,"000")&"E"'),
+            F("StudentName", "姓名", "TEXT", 30, req=True, desc="學生姓名",
+              formula="=" + pick("姓氏") + "&" + pick("名字")),
+            F("DeptName", "系所", "TEXT", 30, index=True, rule=vlist(DEPTS), rtext="請選擇校內系所名稱",
+              desc="限制為校內系所名稱（查閱清單）", formula="=" + pick("系所清單"),
+              lookup=("values", DEPTS)),
+            F("Grade", "年級", "BYTE", req=False, rule="Between 1 And 4", rtext="年級只能填 1～4",
+              desc="限制 1～4", formula="=RANDBETWEEN(1,4)"),
+            F("Email", "電子郵件", "TEXT", 100, key="UQ", rule='Is Null Or Like "*@*.*"', rtext="Email 格式錯誤",
+              desc="由學號產生，設定唯一避免重複", formula='=LOWER({F:StudentID})&"@example.edu.tw"'),
+            F("Phone", "聯絡電話", "TEXT", 15, rule='Is Null Or Like "09########"', rtext="手機須為 09 開頭 10 碼",
+              desc="可空值（約 10% 未填，用來測試空值）",
+              formula='=IF(RANDBETWEEN(1,10)=1,"","09"&TEXT(RANDBETWEEN(0,99999999),"00000000"))'),
+        ],
+        "helpers": [("輔助_社長亂數", "=IF({F:Grade}>=2,RAND(),-1)")],
+    },
+    {
+        "name": "ClubTable", "zh": "社團資料", "rows": 30, "desc": "記錄社團基本資料",
+        "fields": [
+            F("ClubID", "社團編號", "AUTONUMBER", req=True, key="PK", desc="主鍵；自動編號（1001 起）",
+              formula="=1000+ROW()-1"),
+            F("ClubName", "社團名稱", "TEXT", 50, req=True, key="UQ", desc="社團名稱不可重複",
+              formula="=INDEX(社團清單,ROW()-1)"),
+            F("ClubType", "社團類別", "TEXT", 10, req=True, index=True, rule=vlist(CLUB_TYPES),
+              rtext="社團類別不在清單內", desc="查閱：學術、藝文、體育、服務、康樂、聯誼",
+              formula="=INDEX(社團類別對照,ROW()-1)", lookup=("values", CLUB_TYPES)),
+            F("PresidentStudentID", "社長學號", "TEXT", 10, req=True, key="FK:StudentTable.StudentID",
+              desc="外鍵；社長須為 2 年級以上，且一人只擔任一個社團社長",
+              formula="=INDEX({R:StudentTable.StudentID},MATCH(LARGE({R:StudentTable.輔助_社長亂數},ROW()-1),{R:StudentTable.輔助_社長亂數},0))",
+              lookup=("query", "SELECT StudentID, StudentName FROM StudentTable ORDER BY StudentID;", 2, "1440;1440")),
+            F("FoundedYear", "創立年份", "INT", rule="Between 1946 And Year(Date())", rtext="創立年份不合理",
+              desc="社團成立年份（1960～2024）", formula="=RANDBETWEEN(1960,2024)"),
+            F("Description", "社團簡介", "MEMO", desc="長文字；記錄社團宗旨與活動特色",
+              formula='={F:ClubName}&"："&' + pick("簡介片語一") + '&"，"&' + pick("簡介片語二") + '&"。"'),
+        ],
+        "uniques": [["PresidentStudentID"]],
+    },
+    {
+        "name": "ActivityTable", "zh": "活動資料", "rows": 60, "desc": "記錄社團舉辦的活動",
+        "fields": [
+            F("ActivityID", "活動編號", "AUTONUMBER", req=True, key="PK", desc="主鍵；自動編號（2001 起）",
+              formula="=2000+ROW()-1"),
+            F("ClubID", "社團編號", "LONG", req=True, key="FK:ClubTable.ClubID", desc="外鍵；連結 ClubTable",
+              formula="=" + fk("ClubTable", "ClubID"),
+              lookup=("query", "SELECT ClubID, ClubName FROM ClubTable ORDER BY ClubID;", 2, "1008;1800")),
+            F("ActivityName", "活動名稱", "TEXT", 100, req=True, index=True, desc="社團名稱＋活動類型",
+              formula="=INDEX({R:ClubTable.ClubName},MATCH({F:ClubID},{R:ClubTable.ClubID},0))&" + pick("活動類型")),
+            F("ActivityDate", "活動日期", "DATE", req=True, index=True,
+              rule="Between #9/1/2026# And #1/31/2027#", rtext=f"活動日期須在{SEMESTER}內",
+              fmt="Short Date", desc=f"{SEMESTER}（2026/09/14～2026/12/20）",
+              formula="=RANDBETWEEN(DATE(2026,9,14),DATE(2026,12,20))"),
+            F("Location", "活動地點", "TEXT", 100, desc="活動舉辦地點", formula="=" + pick("地點清單")),
+            F("MaxParticipants", "最大人數", "INT", req=True, rule=">0", rtext="最大人數必須大於 0",
+              desc="大於 0 的整數；不可小於實際報名人數（報名 ≥3 人的活動約 1/4 剛好額滿）",
+              formula="=IF(AND(RANDBETWEEN(1,4)=1,{F:輔助_報名人數}>=3),{F:輔助_報名人數},CEILING({F:輔助_報名人數}+RANDBETWEEN(1,20),5))"),
+            F("Fee", "活動費用", "MONEY", req=True, rule=">=0", rtext="費用不可為負數", fmt="Currency",
+              desc="無費用為 0（約 4 成免費），其餘 50～500 元",
+              formula="=IF(RANDBETWEEN(1,10)<=4,0,RANDBETWEEN(1,10)*50)"),
+            F("ActivityStatus", "活動狀態", "TEXT", 10, req=True, index=True, rule=vlist(ACT_STATUS),
+              rtext="活動狀態不在清單內", desc="依日期與報名人數推導；5% 取消",
+              formula='=IF(RANDBETWEEN(1,20)=1,"取消",IF({F:ActivityDate}<基準日,"已結束",IF({F:輔助_報名人數}>={F:MaxParticipants},"已額滿","報名中")))',
+              lookup=("values", ACT_STATUS)),
+        ],
+        "helpers": [
+            ("輔助_報名人數", "=COUNTIF({R:RegistrationTable.ActivityID},{F:ActivityID})"),
+            ("輔助_起始學生", "=RANDBETWEEN(0,COUNTA({R:StudentTable.StudentID})-2)"),
         ],
     },
     {
-        "name": "出版社", "rows": 30, "desc": "出版社（供應商）主檔",
+        "name": "RegistrationTable", "zh": "活動報名", "rows": 240, "desc": "記錄學生參加活動的報名關係",
         "fields": [
-            ("出版社編號", "TEXT", 4, True, "PK", 'Like "P###"', "格式須為 P + 3 位數字",
-             "", "主鍵，P001~P030", '="P"&TEXT(ROW()-1,"000")'),
-            ("出版社名稱", "TEXT", 30, True, "UQ", "", "", "", "出版社名稱，不可重複",
-             '=INDEX(出版社清單,ROW()-1)'),
-            ("聯絡人", "TEXT", 10, True, "", "", "", "", "業務窗口姓名", "=" + RAND_NAME),
-            ("電話", "TEXT", 12, True, "", 'Like "0#-####-####"', "格式須為 0#-####-####",
-             "", "市話（文字型態，保留開頭 0）",
-             '="0"&CHOOSE(RANDBETWEEN(1,4),"2","3","4","7")&"-"&RANDBETWEEN(2000,8999)&"-"&TEXT(RANDBETWEEN(0,9999),"0000")'),
-            ("縣市", "TEXT", 5, True, "", "", "", "", "公司所在縣市", "=" + pick("縣市清單")),
-            ("合作日期", "DATE", None, True, "", ">=#1/1/2010#", "合作日期不可早於 2010/1/1",
-             "yyyy/mm/dd", "開始合作日", '=RANDBETWEEN(DATE(2010,1,1),DATE(2023,12,31))'),
+            F("RegistrationID", "報名編號", "AUTONUMBER", req=True, key="PK", desc="主鍵；自動編號（3001 起）",
+              formula="=3000+ROW()-1"),
+            F("ActivityID", "活動編號", "LONG", req=True, key="FK:ActivityTable.ActivityID",
+              desc="外鍵；前 60 筆依序對應每場活動（每場至少 1 人），其餘隨機",
+              formula="=IF(ROW()<=COUNTA({R:ActivityTable.ActivityID}),INDEX({R:ActivityTable.ActivityID},ROW()),"
+                      + fk("ActivityTable", "ActivityID") + ")",
+              lookup=("query", "SELECT ActivityID, ActivityName FROM ActivityTable ORDER BY ActivityID;", 2, "1008;2880")),
+            F("StudentID", "學號", "TEXT", 10, req=True, key="FK:StudentTable.StudentID",
+              desc="外鍵；同一活動依「起始學生 + 第幾位 × 7」取學生，保證不重複報名",
+              formula="=INDEX({R:StudentTable.StudentID},2+MOD({F:輔助_起始學生}+COUNTIF({C:ActivityID}$1:{C:ActivityID}{P},{F:ActivityID})*7,COUNTA({R:StudentTable.StudentID})-1))",
+              lookup=("query", "SELECT StudentID, StudentName FROM StudentTable ORDER BY StudentID;", 2, "1440;1440")),
+            F("RegisterTime", "報名時間", "DATETIME", req=True, rule=">=#9/1/2026#", rtext="報名時間不可早於開學日",
+              fmt="yyyy/mm/dd hh:nn", desc="活動前 45 天內、活動前一天以前、且不晚於基準日；時間 08:00～23:59",
+              formula="=RANDBETWEEN(MAX({F:輔助_活動日期}-45,DATE(2026,9,1)),MIN({F:輔助_活動日期}-1,基準日))+RANDBETWEEN(480,1439)/1440"),
+            F("AttendanceStatus", "出席狀態", "TEXT", 5, req=True, index=True, rule=vlist(ATTEND),
+              rtext="出席狀態不在清單內", desc="未舉辦或取消的活動一律未簽到；已結束 85% 出席",
+              formula='=IF(OR({F:輔助_活動狀態}="取消",{F:輔助_活動日期}>=基準日),"未簽到",IF(RANDBETWEEN(1,100)<=85,"已出席","缺席"))',
+              lookup=("values", ATTEND)),
+            F("PaymentStatus", "繳費狀態", "TEXT", 5, req=True, index=True, rule=vlist(PAY),
+              rtext="繳費狀態不在清單內", desc="免費活動一律免繳；有出席者一律已繳",
+              formula='=IF({F:輔助_活動費用}=0,"免繳",IF({F:AttendanceStatus}="已出席","已繳",IF(RANDBETWEEN(1,10)<=7,"已繳","未繳")))',
+              lookup=("values", PAY)),
+            F("Note", "備註", "TEXT", 200, desc="可空值；約 25% 有備註",
+              formula='=IF(RANDBETWEEN(1,4)=1,' + pick("備註清單") + ',"")'),
         ],
-    },
-    {
-        "name": "書籍", "rows": 60, "desc": "商品（書籍）主檔",
-        "fields": [
-            ("書籍編號", "TEXT", 5, True, "PK", 'Like "B####"', "格式須為 B + 4 位數字",
-             "", "主鍵，B0001~", '="B"&TEXT(ROW()-1,"0000")'),
-            ("ISBN", "TEXT", 13, True, "UQ", 'Like "978##########"', "ISBN 須為 978 開頭 13 位數字",
-             "", "國際標準書號 13 碼（文字型態）",
-             '="978957"&RANDBETWEEN(100,999)&TEXT(ROW()-1,"0000")'),
-            ("書名", "TEXT", 50, True, "", "", "", "", "書名",
-             "=" + pick("書名前綴") + "&" + pick("書名主題")),
-            ("作者", "TEXT", 10, True, "", "", "", "", "作者姓名", "=" + RAND_NAME),
-            ("類別編號", "TEXT", 3, True, "FK:類別.類別編號", "", "", "", "外鍵 → 類別",
-             "=" + fk("類別", "類別編號")),
-            ("出版社編號", "TEXT", 4, True, "FK:出版社.出版社編號", "", "", "", "外鍵 → 出版社",
-             "=" + fk("出版社", "出版社編號")),
-            ("出版日期", "DATE", None, True, "", "Between #1/1/2015# And Date()", "出版日期須介於 2015/1/1 與今天",
-             "yyyy/mm/dd", "初版日期", '=RANDBETWEEN(DATE(2015,1,1),DATE(2025,6,30))'),
-            ("定價", "MONEY", None, True, "", "Between 50 And 3000", "定價須介於 50~3000 元",
-             "Currency", "建議售價（10 元為單位）", '=ROUND(RANDBETWEEN(150,1200),-1)'),
-            ("庫存量", "INT", None, True, "", ">=0", "庫存量不可為負數",
-             "", "目前庫存本數", '=RANDBETWEEN(0,200)'),
-            ("是否上架", "BOOLEAN", None, False, "", "", "", "Yes/No", "庫存為 0 時一律下架",
-             '=IF({F:庫存量}=0,FALSE,RANDBETWEEN(1,10)<=9)'),
+        "helpers": [
+            ("輔助_起始學生", "=INDEX({R:ActivityTable.輔助_起始學生},MATCH({F:ActivityID},{R:ActivityTable.ActivityID},0))"),
+            ("輔助_活動日期", "=INDEX({R:ActivityTable.ActivityDate},MATCH({F:ActivityID},{R:ActivityTable.ActivityID},0))"),
+            ("輔助_活動費用", "=INDEX({R:ActivityTable.Fee},MATCH({F:ActivityID},{R:ActivityTable.ActivityID},0))"),
+            ("輔助_活動狀態", "=INDEX({R:ActivityTable.ActivityStatus},MATCH({F:ActivityID},{R:ActivityTable.ActivityID},0))"),
         ],
-    },
-    {
-        "name": "會員", "rows": 50, "desc": "會員（顧客）主檔",
-        "fields": [
-            ("會員編號", "TEXT", 5, True, "PK", 'Like "M####"', "格式須為 M + 4 位數字",
-             "", "主鍵，M0001~", '="M"&TEXT(ROW()-1,"0000")'),
-            ("姓名", "TEXT", 10, True, "", "", "", "", "依性別挑選名字",
-             '=' + pick("姓氏") + '&IF({F:性別}="男",' + pick("男生名字") + ',' + pick("女生名字") + ')'),
-            ("性別", "TEXT", 1, True, "", 'In ("男","女")', "性別只能輸入 男 或 女",
-             "", "男 / 女", '=IF(RANDBETWEEN(0,1)=1,"男","女")'),
-            ("生日", "DATE", None, True, "", "Between #1/1/1930# And Date()", "生日不合理",
-             "yyyy/mm/dd", "出生日期（1960~2008）", '=RANDBETWEEN(DATE(1960,1,1),DATE(2008,12,31))'),
-            ("手機", "TEXT", 10, True, "", 'Like "09########"', "手機須為 09 開頭 10 碼",
-             "", "文字型態才能保留開頭 0", '="09"&TEXT(RANDBETWEEN(0,99999999),"00000000")'),
-            ("Email", "TEXT", 50, True, "UQ", 'Like "*@*.*"', "Email 格式錯誤",
-             "", "登入帳號，不可重複",
-             '="member"&TEXT(ROW()-1,"0000")&"@"&' + pick("信箱網域")),
-            ("縣市", "TEXT", 5, True, "", "", "", "", "居住縣市", "=" + pick("縣市清單")),
-            ("加入日期", "DATE", None, True, "", ">=#1/1/2022#", "加入日期不可早於 2022/1/1（開站日）",
-             "yyyy/mm/dd", "註冊日期", '=RANDBETWEEN(DATE(2022,1,1),DATE(2025,6,30))'),
-            ("累積點數", "LONG", None, True, "", ">=0", "點數不可為負數",
-             "", "消費累積點數", '=RANDBETWEEN(0,5000)'),
-            ("會員等級", "TEXT", 2, True, "", 'In ("一般","銀卡","金卡")', "等級只能是 一般/銀卡/金卡",
-             "", "依點數推導：≥3000 金卡、≥1000 銀卡",
-             '=IF({F:累積點數}>=3000,"金卡",IF({F:累積點數}>=1000,"銀卡","一般"))'),
-        ],
-    },
-    {
-        "name": "訂單", "rows": 80, "desc": "訂單主檔（表頭）",
-        "fields": [
-            ("訂單編號", "TEXT", 6, True, "PK", 'Like "O#####"', "格式須為 O + 5 位數字",
-             "", "主鍵，O00001~", '="O"&TEXT(ROW()-1,"00000")'),
-            ("會員編號", "TEXT", 5, True, "FK:會員.會員編號", "", "", "", "外鍵 → 會員",
-             "=" + fk("會員", "會員編號")),
-            ("訂購日期", "DATE", None, True, "", ">=#1/1/2022#", "訂購日期不可早於開站日",
-             "yyyy/mm/dd", "不可早於該會員加入日期",
-             '=RANDBETWEEN(INDEX({R:會員.加入日期},MATCH({F:會員編號},{R:會員.會員編號},0)),DATE(2025,12,31))'),
-            ("付款方式", "TEXT", 10, True, "", 'In ("信用卡","ATM轉帳","貨到付款","LINE Pay","超商代碼")',
-             "付款方式不在清單內", "", "付款方式", "=" + pick("付款方式清單")),
-            ("配送方式", "TEXT", 10, True, "", 'In ("宅配到府","超商取貨","門市自取")',
-             "配送方式不在清單內", "", "配送方式", "=" + pick("配送方式清單")),
-            ("運費", "MONEY", None, True, "", "In (0,60,100)", "運費只能是 0/60/100",
-             "Currency", "依配送方式自動帶入",
-             '=IF({F:配送方式}="宅配到府",100,IF({F:配送方式}="超商取貨",60,0))'),
-            ("訂單狀態", "TEXT", 5, True, "", 'In ("處理中","已完成","已取消")', "狀態不在清單內",
-             "", "12/15 之後的訂單為處理中",
-             '=IF({F:訂購日期}>=DATE(2025,12,15),"處理中",IF(RANDBETWEEN(1,100)<=85,"已完成","已取消"))'),
-        ],
-    },
-    {
-        "name": "訂單明細", "rows": 200, "desc": "訂單明細（訂單 × 書籍）",
-        "fields": [
-            ("明細編號", "AUTONUMBER", None, True, "PK", "", "", "", "自動編號主鍵", '=ROW()-1'),
-            ("訂單編號", "TEXT", 6, True, "FK:訂單.訂單編號", "", "", "", "外鍵 → 訂單；前 N 筆保證每張訂單至少一筆明細",
-             '=IF(ROW()<=COUNTA({R:訂單.訂單編號}),INDEX({R:訂單.訂單編號},ROW()),'
-             + fk("訂單", "訂單編號") + ')'),
-            ("書籍編號", "TEXT", 5, True, "FK:書籍.書籍編號", "", "", "", "外鍵 → 書籍",
-             "=" + fk("書籍", "書籍編號")),
-            ("數量", "INT", None, True, "", "Between 1 And 5", "每筆數量須介於 1~5",
-             "", "七成機率買 1 本", '=IF(RANDBETWEEN(1,10)<=7,1,RANDBETWEEN(2,5))'),
-            ("單價", "MONEY", None, True, "", ">0", "單價必須大於 0",
-             "Currency", "下單當時單價，帶入書籍定價",
-             '=INDEX({R:書籍.定價},MATCH({F:書籍編號},{R:書籍.書籍編號},0))'),
-            ("折扣", "DOUBLE", None, True, "", "Between 0.5 And 1", "折扣須介於 0.5~1",
-             "Percent", "依會員等級：金卡 85 折、銀卡 9 折",
-             '=IF(INDEX({R:會員.會員等級},MATCH(INDEX({R:訂單.會員編號},MATCH({F:訂單編號},{R:訂單.訂單編號},0)),{R:會員.會員編號},0))="金卡",0.85,'
-             'IF(INDEX({R:會員.會員等級},MATCH(INDEX({R:訂單.會員編號},MATCH({F:訂單編號},{R:訂單.訂單編號},0)),{R:會員.會員編號},0))="銀卡",0.9,1))'),
-        ],
+        "uniques": [["ActivityID", "StudentID"]],
     },
 ]
 
 DESIGN_CHANGES = [
-    ("手機、電話、ISBN 由「數字」改成「簡短文字」", "數字型態會吃掉開頭的 0（0912… → 912…），ISBN 13 碼也不需要計算。"),
-    ("訂單不存「訂單總金額」", "總金額可由 訂單明細(數量×單價×折扣) + 運費 計算，存兩份容易不一致，改用查詢計算。"),
-    ("訂單明細多存一個「單價」", "書籍定價日後會調整，明細要保留下單當下的價格，所以複製一份到明細。"),
-    ("訂單明細主鍵改用自動編號", "原本想用 (訂單編號+書籍編號) 複合鍵，但同一張訂單可能分兩次加入同一本書，改用自動編號較單純。"),
-    ("會員等級改由累積點數推導", "避免出現「點數 4000 卻是一般會員」這種矛盾資料。"),
-    ("運費改由配送方式推導", "宅配 100、超商 60、自取 0，避免手動輸入錯誤。"),
-    ("訂購日期 ≥ 該會員加入日期", "假資料若隨機產生日期，可能出現「還沒加入就先下單」，所以用 INDEX/MATCH 取出加入日期當下限。"),
-    ("庫存為 0 時強制下架", "是否上架與庫存量連動，符合實際操作。"),
-    ("每張訂單至少一筆明細", "明細前 80 筆依序對應 80 張訂單，其餘才隨機，避免出現空訂單。"),
-    ("編號欄位加上 Like 驗證規則", "如 Like \"M####\"，人工建檔時可擋掉打錯格式的編號。"),
+    ("學號加上格式驗證，且入學年與年級連動",
+     "HW1 只設定 短文字(10)。HW2 加上 Like \"4#######[A-Z]\"，並讓學號中的入學年 = 116 − 年級（115 學年度 1 年級 → 15），避免「學號是 112 入學卻填 1 年級」。"),
+    ("系所改成「查閱 + 驗證規則」",
+     "HW1 寫「限制為校內系所名稱」，實作成值清單下拉選單，再加 In(...) 驗證規則，打錯字的系所名稱進不來。"),
+    ("Email 由學號自動組成",
+     "學號已唯一，Email = 學號小寫 + @example.edu.tw，自然不會重複，符合 HW1 的唯一限制。"),
+    ("聯絡電話加上格式驗證，並保留空值",
+     "HW1 設定可空值，所以驗證規則寫成 Is Null Or Like \"09########\"；假資料刻意讓約 10% 空白，測試空值能否正常匯入。"),
+    ("社長學號加上唯一索引、限 2 年級以上",
+     "HW1 只設外鍵。實務上一個學生不會同時當兩個社團社長，新生也不會當社長，所以加唯一索引，假資料也只從 2 年級以上抽。"),
+    ("創立年份：數字(4) → 整數 + 範圍驗證",
+     "Access 的「數字」要選欄位大小，4 位數年份用「整數」即可，並限制 1946（建校）～今年。"),
+    ("活動費用：數字 → 貨幣",
+     "金額用「貨幣」型態避免浮點誤差，並限制 >= 0。"),
+    ("最大人數不可小於實際報名人數",
+     "HW1 只限制 > 0。HW2 讓最大人數依報名人數產生，並在「檢核」頁確認沒有超收。"),
+    ("活動狀態改由資料推導",
+     "已過基準日 → 已結束；報名人數 = 最大人數 → 已額滿；其餘 → 報名中；另有 5% 取消。避免出現「已結束但日期在未來」。"),
+    ("活動日期限定在本學期",
+     f"所有活動都在 {SEMESTER}，這樣 1 年級新生（2026/9 入學）也能合理報名，不會出現「還沒入學就報名」。"),
+    ("報名時間必須早於活動日期",
+     "報名時間 = 活動前 45 天內的隨機日期 + 08:00～23:59 的隨機時間，且不晚於基準日（不能在未來報名）。"),
+    ("出席 / 繳費狀態與活動連動",
+     "未舉辦或取消的活動只能是「未簽到」；免費活動一律「免繳」；有出席的一律「已繳」。"),
+    ("(活動編號, 學號) 複合唯一用公式保證",
+     "HW1 要求同一學生不可重複報名同一活動。隨機抽學生一定會撞，所以同一活動的第 k 位報名者取「起始學生 + k×7」（7 與學生人數 60 互質），保證不重複，並在 Access 建立複合唯一索引。"),
+    ("自動編號從 1001 / 2001 / 3001 開始",
+     "沿用 HW1 的填寫範例（社團 1001、活動 2001、報名 3001），一看編號就知道是哪張表。"),
 ]

@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# 一鍵重建 HW2 全部檔案：工作檔(公式) → LibreOffice 重新計算 → 匯入檔(值) → Access .accdb
-# 需要：python3 + openpyxl、LibreOffice、Java 17+、Maven（下載 Jackcess）
+# 一鍵重建 HW2 全部檔案：工作檔(公式) → LibreOffice 重新計算 → 匯入檔(值) → Access .accdb → zip
+# 需要：python3 + openpyxl、LibreOffice、Java 17+、Maven（第一次會下載 Jackcess）
 set -euo pipefail
 export LANG=C.UTF-8 LC_ALL=C.UTF-8   # Java 需要 UTF-8 locale 才能處理中文檔名
 HERE="$(cd "$(dirname "$0")" && pwd)"
+SID="$(python3 -c "import sys; sys.path.insert(0, '$HERE'); from spec import STUDENT_ID; print(STUDENT_ID)")"
 OUT="$HERE/../submission"
 WORK="$(mktemp -d)"
-mkdir -p "$OUT"
+rm -rf "$OUT" && mkdir -p "$OUT"
 
-python3 "$HERE/build_excel.py" "$WORK/HW2_假資料工作檔.xlsx"
-soffice --headless --calc --convert-to xlsx --outdir "$WORK/calc" "$WORK/HW2_假資料工作檔.xlsx" >/dev/null 2>&1
-cp "$WORK/calc/HW2_假資料工作檔.xlsx" "$OUT/HW2_假資料工作檔.xlsx"
-python3 "$HERE/export_import.py" "$OUT/HW2_假資料工作檔.xlsx" "$OUT/HW2_匯入資料.xlsx" "$WORK/tsv"
+WORKBOOK="HW2_假資料工作檔_${SID}.xlsx"
+python3 "$HERE/build_excel.py" "$WORK/$WORKBOOK"
+soffice --headless --calc --convert-to xlsx --outdir "$WORK/calc" "$WORK/$WORKBOOK" >/dev/null 2>&1
+cp "$WORK/calc/$WORKBOOK" "$OUT/$WORKBOOK"
+python3 "$HERE/export_import.py" "$OUT/$WORKBOOK" "$OUT/HW2_匯入資料_${SID}.xlsx" "$WORK/tsv"
 
 LIB="$HERE/.lib"
 if [ ! -f "$LIB/jackcess-4.0.5.jar" ]; then
@@ -20,13 +22,14 @@ if [ ! -f "$LIB/jackcess-4.0.5.jar" ]; then
   mvn -q -f "$WORK/pom.xml" dependency:copy-dependencies -DoutputDirectory="$LIB"
 fi
 javac -encoding UTF-8 -cp "$LIB/*" -d "$WORK/cls" "$HERE/BuildAccdb.java"
-java -Dfile.encoding=UTF-8 -cp "$LIB/*:$WORK/cls" BuildAccdb "$WORK/tsv" "$OUT/HW2_線上書店資料庫.accdb"
-rm -rf "$WORK"
+java -Dfile.encoding=UTF-8 -cp "$LIB/*:$WORK/cls" BuildAccdb "$WORK/tsv" "$OUT/HW2_社團活動資料庫_${SID}.accdb"
 
-# 附上 AI 生成的程式，並打包成繳交用 zip（請把「學號」改成自己的學號）
+# 附上 AI 生成說明 / Prompt / 程式，並打包成繳交用 zip
+cp "$HERE/AI生成說明與Prompt.md" "$OUT/"
 mkdir -p "$OUT/AI生成內容"
 cp "$HERE"/spec.py "$HERE"/build_excel.py "$HERE"/export_import.py "$HERE"/BuildAccdb.java "$HERE"/build.sh "$OUT/AI生成內容/"
-ZIP="$HERE/../HW2_DBandETL_${STUDENT_ID:-學號}.zip"
+rm -f "$HERE"/../HW2_DBandETL_*.zip
+ZIP="$HERE/../HW2_DBandETL_${SID}.zip"
 python3 - "$OUT" "$ZIP" <<'PY'
 import os, sys, zipfile
 src, dst = sys.argv[1], sys.argv[2]
@@ -38,3 +41,4 @@ with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(p, os.path.join(root, os.path.relpath(p, src)))
 print("saved", dst)
 PY
+rm -rf "$WORK"
